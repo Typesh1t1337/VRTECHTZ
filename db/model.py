@@ -15,6 +15,7 @@ class Product(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, index=True)
+    kaspi_id: Mapped[int] = mapped_column(Integer, index=True)
     description: Mapped[str] = mapped_column(String, index=True)
     category: Mapped[str] = mapped_column(String, index=True, nullable=False)
     min_price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
@@ -24,12 +25,17 @@ class Product(Base):
     seller_amount: Mapped[int] = mapped_column(Integer, nullable=False)
     image_url: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=True)
 
-    price_history: Mapped[list["ProductHistory"]] = relationship(
+    product_history: Mapped[list["ProductHistory"]] = relationship(
         back_populates="product",
         cascade="all, delete-orphan",
     )
 
-    offer: Mapped[list["Offer"]] = relationship(
+    offers: Mapped[list["Offer"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+
+    offers_history: Mapped[list["OfferHistory"]] = relationship(
         back_populates="product",
         cascade="all, delete-orphan",
     )
@@ -39,6 +45,7 @@ class Product(Base):
             "name",
             "description",
             "category",
+            "kaspi_id",
             "min_price",
             "max_price",
             "rate",
@@ -54,11 +61,36 @@ class ProductHistory(Base):
     __tablename__ = 'product_history'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True)
+    kaspi_id: Mapped[int] = mapped_column(Integer, index=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("product.id", ondelete="CASCADE"), nullable=False)
-    price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
+    description: Mapped[str] = mapped_column(String, index=True)
+    category: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    min_price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
+    max_price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
+    rate: Mapped[Float] = mapped_column(Float, nullable=False)
     checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    image_url: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=True)
+    review_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    seller_amount: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    product: Mapped["Product"] = relationship(back_populates="price_history")
+    product: Mapped["Product"] = relationship(back_populates="product_history")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "description",
+            "category",
+            "min_price",
+            "max_price",
+            "rate",
+            "kaspi_id",
+            "review_amount",
+            "seller_amount",
+            "image_url",
+            name="uq_product_history_full_duplicate"
+        ),
+    )
 
 
 class Offer(Base):
@@ -69,4 +101,19 @@ class Offer(Base):
     seller: Mapped[str] = mapped_column(String, nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
 
-    product: Mapped["Product"] = relationship(back_populates="offer")
+    product: Mapped["Product"] = relationship(back_populates="offers")
+    offer_history: Mapped[list["OfferHistory"]] = relationship(back_populates="offer")
+
+
+class OfferHistory(Base):
+    __tablename__ = 'offer_history'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("product.id", ondelete="CASCADE"), nullable=False)
+    offer_id: Mapped[int] = mapped_column(ForeignKey("offer.id", ondelete="CASCADE"), nullable=False)
+    seller: Mapped[str] = mapped_column(String, nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(scale=2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+
+    offer: Mapped["Offer"] = relationship(back_populates="offer_history")
+    product: Mapped["Product"] = relationship(back_populates="offers_history")

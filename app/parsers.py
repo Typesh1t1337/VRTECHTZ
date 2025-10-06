@@ -122,6 +122,7 @@ async def parse_data():
             f.write(json.dumps(result_to_dump, ensure_ascii=False, indent=4))
 
         result = {
+            "kaspi_id": int(slug),
             "name": product_data["name"],
             "description": product_data["description"],
             "category": product_data["category"],
