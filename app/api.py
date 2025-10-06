@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.parsers import parse_data
 import httpx
 from app.repo import Repo
+from app.schema import ProductResponse
 
 
 router = APIRouter(prefix="/products")
@@ -35,13 +36,12 @@ async def parse_product(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 
+@router.get("/", response_model=list[ProductResponse])
+async def get_products(db: AsyncSession = Depends(get_db)):
+    repo = Repo(session=db)
+    res = await repo.get_products()
 
-
-
-
-
-
-
+    return res
 
 
 

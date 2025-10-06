@@ -11,8 +11,13 @@ from celery_app.celery_logger import get_logger
 @celery_app.task
 def update_products():
     logger = get_logger()
-    logger.info("Celery task 'update_products' started")
-    asyncio.run(update_all_products(logger))
+    try:
+        loop = asyncio.get_event_loop()
+        future = asyncio.ensure_future(update_all_products(logger))
+        loop.run_until_complete(future)
+        logger.info("Celery task 'update_products' started")
+    except RuntimeError:
+        asyncio.run(update_all_products(logger))
 
 
 async def update_all_products(logger):
