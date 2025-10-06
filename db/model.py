@@ -62,7 +62,7 @@ class ProductHistory(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, index=True)
-    kaspi_id: Mapped[int] = mapped_column(Integer, index=True)
+    kaspi_id: Mapped[int] = mapped_column(Integer, index=True, unique=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("product.id", ondelete="CASCADE"), nullable=False)
     description: Mapped[str] = mapped_column(String, index=True)
     category: Mapped[str] = mapped_column(String, index=True, nullable=False)

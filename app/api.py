@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
+from starlette import status
 
 from db.model import Product, Offer
 from db.db_con import get_db
@@ -19,7 +20,12 @@ async def parse_product(db: AsyncSession = Depends(get_db)):
         data, offers_data = await parse_data()
         obj = Product(**data)
         repo = Repo(session=db)
-        res = await repo.add_product(obj)
+        res, changed = await repo.add__or_update_product(obj)
+        if not changed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Product exist and not updated"
+            )
 
         offers_obj = [Offer(**{**offer, "product_id": res.id}) for offer in offers_data]
         res_offers = await repo.add_offers(offers_obj)
