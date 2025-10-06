@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery_app.celery import celery_app
-from app.parsers import parse_data
+from app.tools import parse_data
 import asyncio
 from sqlalchemy import select
 from db.db_con import async_session

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
+
 from db.model import Product, Offer
 from db.db_con import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.parsers import parse_data
+from app.tools import parse_data
 import httpx
 from app.repo import Repo
 from app.schema import ProductResponse, ProductWithHistoryResponse
@@ -28,12 +30,8 @@ async def parse_product(db: AsyncSession = Depends(get_db)):
         }
     except FileNotFoundError:
         raise HTTPException(status_code=400, detail="seed.json not found")
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing key in seed.json: {e}")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 
 @router.get("/", response_model=list[ProductResponse])
