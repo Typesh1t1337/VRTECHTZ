@@ -27,6 +27,7 @@ async def update_all_products(logger):
         stmt = select(Product).where(Product.kaspi_id == data['kaspi_id'])
         query = await session.execute(stmt)
         db_product = query.scalars().first()
+        change_made = False
 
         if db_product:
             changed = False
@@ -45,6 +46,7 @@ async def update_all_products(logger):
                     name=db_product.name,
                     description=db_product.description,
                     category=db_product.category,
+                    kaspi_id=db_product.kaspi_id,
                     min_price=db_product.min_price,
                     max_price=db_product.max_price,
                     rate=db_product.rate,
@@ -52,12 +54,12 @@ async def update_all_products(logger):
                     seller_amount=db_product.seller_amount,
                 )
                 session.add(history)
-                logger.info({"type": "product_update", "product_id": db_product.id, "changes": changes})
 
                 for field in ["description", "category", "min_price", "max_price", "rate", "review_amount",
                               "seller_amount"]:
                     setattr(db_product, field, data[field])
-
+                change_made = True
+                logger.info({"type": "product_update", "product_id": db_product.id, "changes": changes})
         else:
             db_product = Product(**data)
             session.add(db_product)
@@ -89,9 +91,15 @@ async def update_all_products(logger):
                     offers_history.append(history)
 
                     db_offer.price = offer_data["price"]
+                    change_made = True
             else:
                 new_offer = Offer(product_id=db_product.id, **offer_data)
                 new_offers.append(new_offer)
+                change_made = True
+
+        if not change_made:
+            logger.info({"type": "no_changes", "product_id": db_product.id})
+            return False
 
         if new_offers:
             session.add_all(new_offers)
@@ -101,6 +109,7 @@ async def update_all_products(logger):
         await session.commit()
         logger.info({"type": "task_finished", "product_id": db_product.id})
 
+        return True
 
 
 
