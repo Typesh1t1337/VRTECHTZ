@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.parsers import parse_data
 import httpx
 from app.repo import Repo
-from app.schema import ProductResponse
+from app.schema import ProductResponse, ProductWithHistoryResponse
 
 
 router = APIRouter(prefix="/products")
@@ -44,7 +44,12 @@ async def get_products(db: AsyncSession = Depends(get_db)):
     return res
 
 
+@router.get("/history", response_model=list[ProductWithHistoryResponse])
+async def get_history(db: AsyncSession = Depends(get_db)):
+    repo = Repo(session=db)
+    res = await repo.get_products_history()
 
+    return res
 
 
 

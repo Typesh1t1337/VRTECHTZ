@@ -1,7 +1,7 @@
 from typing import Sequence
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.model import Product, Offer
+from db.model import Product, Offer, ProductHistory
 from sqlalchemy import select
 
 
@@ -23,6 +23,13 @@ class Repo:
 
     async def get_products(self) -> Sequence[Product]:
         stmt = select(Product).options(selectinload(Product.offers))
+        query = await self.session.execute(stmt)
+        result = query.scalars().all()
+
+        return result
+
+    async def get_products_history(self) -> Sequence[Product]:
+        stmt = select(Product).options(selectinload(Product.product_history), selectinload(Product.offers_history))
         query = await self.session.execute(stmt)
         result = query.scalars().all()
 
