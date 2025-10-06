@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_USER: str
     POSTGRES_DB: str
-    POSTGRES_POST: int
+    POSTGRES_PORT: int
     POSTGRES_HOST: str
     CELERY_BROKER: str
     CELERY_RESULT: str
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     def db_async_credentials(self) -> str:
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_POST}/{self.POSTGRES_DB}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
 

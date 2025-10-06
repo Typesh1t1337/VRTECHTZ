@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 from urllib.parse import urlparse
 import json
 import httpx
@@ -53,6 +54,17 @@ async def parse_data():
         )
 
         soup = BeautifulSoup(response_html.text, "html.parser")
+        no_type_scripts = response_html.text.split("</script><script>")[9]
+        match = re.search(r'BACKEND\.components\.item\s*=\s*(\{.*\});?', no_type_scripts, re.DOTALL)
+        img = list()
+        if match:
+            json_str = match.group(1)
+            data = json.loads(json_str)["galleryImages"]
+            for d in data:
+                for k, v in d.items():
+                    if k == "large":
+                        img.append(v)
+
         scripts = soup.find_all("script", type="application/ld+json")
 
         product_data = None
@@ -70,38 +82,35 @@ async def parse_data():
         result_review_api = response_review_api.json()
         total_offers = result_offer_api["offersCount"]
         rate = result_review_api["summary"]["global"]
-        min_price = result_offer_api["offers"][0]["price"]
         review_amount = result_review_api["groupSummary"][1]["total"]
 
         new_api_body = body.copy()
         new_api_body["page"] = total_offers - 1
 
-        response = await client.post(url=f"https://kaspi.kz/yml/offer-view/offers/{slug}", headers=headers_api,
-                                         json=new_api_body)
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-
-        response_json = response.json()
-
-        max_price = response_json["offers"][0]["price"]
-        each_page_responses = []
-
         pages_to_parse = (total_offers + 63) // 64 - 1
+        tasks = []
         for i in range(pages_to_parse + 1):
             new_api_body = body.copy()
             new_api_body["page"] = i
             new_api_body["limit"] = 64
-            response = client.post(f"https://kaspi.kz/yml/offer-view/offers/{slug}", headers=headers_api, json=new_api_body)
-            each_page_responses.append(response)
+            tasks.append(asyncio.create_task(client.post(
+                f"https://kaspi.kz/yml/offer-view/offers/{slug}",
+                headers=headers_api,
+                json=new_api_body
+            )))
 
-        responses = await asyncio.gather(*each_page_responses)
-        result_to_dump = dict()
+        responses = await asyncio.gather(*tasks)
+        result_to_dump = list()
 
-        for each_page_response in responses:
+        for idx, each_page_response in enumerate(responses):
             each_page_response_json = each_page_response.json()
             for offer in each_page_response_json["offers"]:
-                result_to_dump[offer["merchantName"]] = offer["price"]
+                result_to_dump.append({
+                    "seller": offer["merchantName"],
+                    "price": offer["price"]})
+
+        min_price = responses[0].json()["offers"][0]["price"]
+        max_price = responses[-1].json()["offers"][-1]["price"]
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -116,14 +125,15 @@ async def parse_data():
             "name": product_data["name"],
             "description": product_data["description"],
             "category": product_data["category"],
-            "image": product_data["image"],
+            "image_url": img,
             "min_price": min_price,
             "max_price": max_price,
             "review_amount": review_amount,
             "rate": rate,
+            "seller_amount": total_offers,
         }
 
         with open(f"{new_folder}/export.json", "w", encoding="utf-8") as f:
             f.write(json.dumps(result, ensure_ascii=False, indent=4))
 
-        return result
+        return result, result_to_dump
